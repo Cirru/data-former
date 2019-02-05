@@ -11,7 +11,8 @@
             [app.config :refer [dev?]]
             [cirru-sepal.core :refer [make-string]]
             [cljs.reader :refer [read-string]]
-            ["copy-text-to-clipboard" :as copy!]))
+            ["copy-text-to-clipboard" :as copy!]
+            [app.comp.button :refer [comp-live-button]]))
 
 (defcomp
  comp-container
@@ -24,15 +25,14 @@
      (span {})
      (div
       {}
-      (button
-       {:inner-text "Run",
-        :style ui/button,
-        :on-click (fn [e d! m!] (d! :data (make-string (read-string (:content store)))))})
+      (cursor->
+       :run
+       comp-live-button
+       states
+       "Run"
+       (fn [e d! m!] (d! :data (make-string (read-string (:content store))))))
       (=< 8 nil)
-      (button
-       {:inner-text "Copy",
-        :style ui/button,
-        :on-click (fn [e d! m!] (copy! (:data store)))})))
+      (cursor-> :copy comp-live-button states "Copy" (fn [e d! m!] (copy! (:data store))))))
     (div
      {:style (merge ui/flex ui/row)}
      (textarea
