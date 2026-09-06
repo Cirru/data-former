@@ -4,4 +4,5 @@
 
 js-out/
 node_modules/
+.yarn/*.gz
 dist/
