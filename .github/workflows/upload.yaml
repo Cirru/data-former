@@ -10,8 +10,8 @@ permissions:
   contents: read
 
 concurrency:
-  group: upload-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: true
+  group: cos-upload-${{ github.repository }}-${{ github.event_name == 'pull_request' && 'pr' || 'production' }}
+  cancel-in-progress: false
 
 jobs:
   test:
@@ -38,14 +38,17 @@ jobs:
 
     - name: Install and validate
       run: |
-        # Published Respo packages request compatible but different alpha
-        # versions, so resolve their highest versions deterministically.
-        caps --ci
+        set -euo pipefail
+        test ! -e compact.cirru
+        test ! -e package.cirru
+        caps --strict --ci
         yarn install --immutable
         caps verify --toolchain
         calcit edit format
         git diff --exit-code -- calcit.cirru
         calcit calcit.cirru --check-only
+        calcit fix --workflow strict --verify
+        calcit analyze check-public --ns app.comp.button --ns app.comp.container --ns app.config --ns app.main --ns app.schema --ns app.updater --summary-only
         calcit calcit.cirru test --require-match
         calcit calcit.cirru analyze dynamic-methods --summary-only --format json
         calcit calcit.cirru analyze deprecated --summary-only --format json
@@ -70,8 +73,11 @@ jobs:
 
     - name: Build client with CDN asset URLs
       run: |
+        set -euo pipefail
         calcit calcit.cirru js
+        node --test scripts/former-regression.test.mjs
         yarn build
+        grep -Fq "$VITE_BASE_URL" dist/index.html
 
     - name: Check COS credentials
       id: cos-credentials
