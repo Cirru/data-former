@@ -5,7 +5,7 @@
   :entries $ {} $ :default
     {} (:description |) (:init-fn 'app.main/main!) (:mode :js) (:reload-fn 'app.main/reload!) (:target :browser)
       :feature-policy $ {}
-      :modules $ [] |respo.calcit/ |lilac/ |memof/ |respo-ui.calcit/ |respo-markdown.calcit/ |reel.calcit/ |js-ffi/
+      :modules $ [] |respo.calcit/ |respo-ui.calcit/ |reel.calcit/ |js-ffi/
       :type-slots $ {}
   :files $ {}
     'app.comp.button $ %{} 'FileEntry
@@ -22,16 +22,16 @@
               button $ {}
                 :style $ merge ui/button $ assert-type
                   if
-                        get state :darken?
-                        , .unwrap-or false
+                      get state :darken?
+                      , .unwrap-or false
                     {} $ :background-color $ hsl 0 0 94
                     {}
                   :: 'Map 'Tag 'Dynamic
                 :inner-text text
                 :on-click $ fn (e d!) (on-click e d!)
-                  d! cursor $ assoc state :darken? true
+                  d! $ Op :states cursor $ assoc state :darken? true
                   browser/set-timeout!
-                    fn () $ d! cursor $ assoc state :darken? false
+                    fn () $ d! $ Op :states cursor (assoc state :darken? false)
                     , 400
           :examples $ []
           :schema $ :: 'Fn $ {} (:return 'respo.schema/Component)
@@ -46,6 +46,7 @@
             [] respo.comp.space :refer $ [] =<
             [] app.config :refer $ [] dev?
             js-ffi.browser :as browser
+            app.schema :refer $ [] Op
     'app.comp.container $ %{} 'FileEntry
       :defs $ {} $ 'comp-container
         %{} 'CodeEntry (:doc |)
@@ -93,34 +94,44 @@
       :ns $ %{} 'NsEntry (:doc |)
         :code $ quote $ ns app.comp.container
           :require
-            [] respo-ui.core :refer $ [] hsl
-            [] respo-ui.core :as ui
-            [] respo.core :refer $ [] defcomp >> <> div button textarea span
-            [] respo.comp.space :refer $ [] =<
-            [] reel.comp.reel :refer $ [] comp-reel
-            [] respo-md.comp.md :refer $ [] comp-md
-            [] app.config :refer $ [] dev?
-            [] |copy-text-to-clipboard :default copy!
-            [] app.comp.button :refer $ [] comp-live-button
+            respo-ui.core :refer $ [] hsl
+            respo-ui.core :as ui
+            respo.core :refer $ [] defcomp >> <> div button textarea span
+            respo.comp.space :refer $ [] =<
+            reel.comp.reel :refer $ [] comp-reel
+            app.config :refer $ [] dev?
+            |copy-text-to-clipboard :default copy!
+            app.comp.button :refer $ [] comp-live-button
             app.schema :refer $ [] Op Store
     'app.config $ %{} 'FileEntry
       :defs $ {}
         'cdn? $ %{} 'CodeEntry (:doc |)
-          :code $ quote $ def cdn?
+          :code $ quote $ def cdn? (detect-cdn?)
+          :examples $ []
+          :schema $ :: 'Bool
+        'detect-cdn? $ %{} 'CodeEntry (:doc |)
+          :code $ quote $ defn detect-cdn? ()
+            hint-fn $ {}
+              :args $ []
+              :return 'Bool
+              :features $ #{} :js-ffi
             cond
                 exists? js/window
                 , false
-              (exists? js/process) (= |true js/process.env.cdn)
-              :else false
+              (exists? js/process)
+                = |true $ option:unwrap-or (get-env |cdn) |false
+              true false
           :examples $ []
-          :schema $ :: 'Dynamic
+          :schema $ :: 'Fn $ {} (:return 'Bool)
+            :args $ []
+            :features $ #{} :js-ffi
         'dev? $ %{} 'CodeEntry (:doc |)
           :code $ quote $ def dev?
             = |dev $
               get-env |mode
               , .unwrap-or |release
           :examples $ []
-          :schema $ :: 'Dynamic
+          :schema $ :: 'Bool
         'site $ %{} 'CodeEntry (:doc |)
           :code $ quote $ def site
             {} (:dev-ui |http://localhost:8100/main.css) (:release-ui |http://cdn.tiye.me/favored-fonts/main.css) (:cdn-url |http://cdn.tiye.me/data-former/) (:cdn-folder |tiye.me:cdn/data-former) (:title "|Data former") (:icon |http://cdn.tiye.me/logo/cirru.png) (:storage-key |data-former) (:upload-folder |tiye.me:repo/Cirru/data-former/)
@@ -241,10 +252,7 @@
           :schema $ :: 'StructDef
         'store $ %{} 'CodeEntry (:doc |)
           :code $ quote $ def store
-            %{} Store
-              :states $ {}
-              :content |
-              :data nil
+            Store :states ({}) :content | :data nil
           :examples $ []
           :schema $ :: 'app.schema/Store
       :ns $ %{} 'NsEntry (:doc |)
