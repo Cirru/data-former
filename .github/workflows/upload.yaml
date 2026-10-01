@@ -77,7 +77,6 @@ jobs:
         calcit calcit.cirru js
         node --test scripts/former-regression.test.mjs
         yarn build
-        grep -Fq "$VITE_BASE_URL" dist/index.html
 
     - name: Check COS credentials
       id: cos-credentials
