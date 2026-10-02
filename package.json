@@ -4,9 +4,9 @@
   "description": "Data form editor built with Calcit",
   "main": "index.js",
   "scripts": {
-    "compile": "calcit calcit.cirru js",
-    "build": "vite build",
-    "dev": "vite"
+    "compile": "calcit calcit.cirru",
+    "build": "yarn compile && vite build",
+    "dev": "yarn compile && vite"
   },
   "repository": {
     "type": "git",

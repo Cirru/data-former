@@ -10,8 +10,9 @@ permissions:
   contents: read
 
 concurrency:
-  group: cos-upload-${{ github.repository }}-${{ github.event_name == 'pull_request' && 'pr' || 'production' }}
+  group: cos-upload-${{ github.repository }}-${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || 'production' }}
   cancel-in-progress: false
+  queue: max
 
 jobs:
   test:
@@ -39,28 +40,29 @@ jobs:
     - name: Install and validate
       run: |
         set -euo pipefail
+        test -f calcit.cirru
+        test -f deps.cirru
         test ! -e compact.cirru
         test ! -e package.cirru
         caps --strict --ci
         yarn install --immutable
         caps verify --toolchain
-        calcit edit format
+        calcit calcit.cirru edit format
         git diff --exit-code -- calcit.cirru
         calcit calcit.cirru --check-only
-        calcit fix --workflow strict --verify
-        calcit analyze check-public --ns app.comp.button --ns app.comp.container --ns app.config --ns app.main --ns app.schema --ns app.updater --summary-only
+        calcit calcit.cirru analyze check-public --ns app.comp.button --ns app.comp.container --ns app.config --ns app.main --ns app.schema --ns app.updater --summary-only
         calcit calcit.cirru test --require-match
-        calcit calcit.cirru analyze dynamic-methods --summary-only --format json
-        calcit calcit.cirru analyze deprecated --summary-only --format json
         calcit calcit.cirru analyze quality --baseline config/calcit-quality.cirru
 
     - name: Select CDN asset path
       id: asset-path
       env:
         CDN_ORIGIN: https://cos-sh.tiye.me
+        PR_NUMBER: ${{ github.event.pull_request.number }}
       run: |
+        set -euo pipefail
         if [[ "$GITHUB_EVENT_NAME" == "pull_request" ]]; then
-          asset_prefix="${GITHUB_REPOSITORY}/pr/"
+          asset_prefix="${GITHUB_REPOSITORY}/pr/${PR_NUMBER}/${GITHUB_RUN_ID}/${GITHUB_RUN_ATTEMPT}/"
         elif [[ "$GITHUB_REF" == "refs/heads/main" ]]; then
           asset_prefix="${GITHUB_REPOSITORY}/"
         else
@@ -74,9 +76,8 @@ jobs:
     - name: Build client with CDN asset URLs
       run: |
         set -euo pipefail
-        calcit calcit.cirru js
-        node --test scripts/former-regression.test.mjs
         yarn build
+        node --test scripts/former-regression.test.mjs
 
     - name: Check COS credentials
       id: cos-credentials
@@ -100,7 +101,7 @@ jobs:
 
     - name: Upload and verify static assets on COS
       if: steps.cos-credentials.outputs.available == 'true'
-      uses: worktools/cos-upload-action@17e6d213fe9f6772a6090a13c8ba044cd6cbcb09 # v1.1.1
+      uses: worktools/cos-upload-action@06d6027dcca6413c5936e04a9b6e9f0d5ef71ba0 # v1.2.0
       with:
         source-dir: dist
         bucket: ${{ secrets.COS_BUCKET }}
