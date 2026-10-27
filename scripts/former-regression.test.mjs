@@ -3,10 +3,10 @@ import test from 'node:test';
 import * as c from '../js-out/calcit.core.mjs';
 import { comp_live_button } from '../js-out/app.comp.button.mjs';
 import { comp_container } from '../js-out/app.comp.container.mjs';
-import { store, Op } from '../js-out/app.schema.mjs';
+import { store, Op, restore_store } from '../js-out/app.schema.mjs';
 import { updater } from '../js-out/app.updater.mjs';
 import { detect_cdn_$q_ } from '../js-out/app.config.mjs';
-import { component_$q_, component_tree } from '../js-out/respo.util.detect.mjs';
+import { component_$q_, component_tree, as_element, element_event, element_children, child_pair_value } from '../js-out/respo.util.detect.mjs';
 import { make_string } from '../js-out/respo.render.html.mjs';
 
 const t = c.init_tags(['event', 'children', 'click', 'input', 'some', 'content', 'data', 'value', 'store', 'states', 'cursor', 'run', 'darken?']);
@@ -16,16 +16,13 @@ const nth = (v, i) => c.option_$o_unwrap(c.nth(v, i));
 const en = c._$n_enum_$o_nth;
 function handlers(node, kind, label = '', result = []) {
   if (component_$q_(node)) return handlers(c.option_$o_unwrap(component_tree(node)), kind, label, result);
-  const event = c.get(node, t.event);
-  if (en(event, 0) === t.some && (!label || make_string(node).includes(`>${label}<`))) {
-    const fn = c.get(c.option_$o_unwrap(event), kind);
+  const element = as_element(node);
+  if (!label || make_string(node).includes(`>${label}<`)) {
+    const fn = c.get(element_event(element), kind);
     if (en(fn, 0) === t.some) result.push(c.option_$o_unwrap(fn));
   }
-  const children = c.get(node, t.children);
-  if (en(children, 0) === t.some) {
-    const pairs = c.option_$o_unwrap(children);
-    for (let i = 0; i < c.count(pairs); i++) handlers(nth(nth(pairs, i), 1), kind, label, result);
-  }
+  const children = element_children(element);
+  for (let i = 0; i < c.count(children); i++) handlers(child_pair_value(nth(children, i)), kind, label, result);
   return result;
 }
 function withTimer(fn) {
@@ -77,6 +74,11 @@ test('missing input value is explicitly unwrapped to empty string', () => {
 });
 test('typed hydrate-storage operation preserves the exact Store', () => {
   const saved = c.assoc(store, t.content, 'saved');
+  assert.equal(restore_store(saved), saved);
+  const wire = c.parse_cirru_edn(c.format_cirru_edn(saved));
+  assert.ok(c._$e_(restore_store(wire), saved));
+  assert.ok(c._$e_(restore_store(map(t.states, map(), t.content, 'saved', t.data, field(saved, t.data))), saved));
+  assert.throws(() => restore_store(map(t.states, map(), t.content, 42, t.data, 'saved')));
   assert.ok(c._$e_(updater(store, c._PCT__$o__$o_(Op, c.newTag('hydrate-storage'), saved), 'hydrate', 1), saved));
 });
 test('CDN environment adapter returns a Bool and preserves exact true semantics', () => {
