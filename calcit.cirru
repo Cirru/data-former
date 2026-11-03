@@ -16,18 +16,16 @@
                 cursor $ decode-map-as
                     get states :cursor
                     , .unwrap-or $ []
-                  :: 'List 'Dynamic
+                  quote $ List Dynamic
                 state $
                   get states :data
                   , .unwrap-or $ {} (:darken? false)
               button $ {}
-                :style $ merge ui/button $ assert-type
-                  if
-                      get state :darken?
-                      , .unwrap-or false
-                    {} $ :background-color $ hsl 0 0 94
-                    {}
-                  quote $ Map Tag Dynamic
+                :style $ merge ui/button $ if
+                    get state :darken?
+                    , .unwrap-or false
+                  {} $ :background-color $ hsl 0 0 94
+                  {}
                 :inner-text text
                 :on-click $ fn (e d!)
                   hint-fn $ Fn (Map Tag Dynamic)
@@ -92,7 +90,9 @@
                       d! $ Op :data $
                         get e :value
                         , .unwrap-or |
-                when dev? $ comp-reel (>> states :reel) reel $ {}
+                if dev?
+                  Option :some $ comp-reel (>> states :reel) reel $ {}
+                  Option :none
           :examples $ []
           :schema $ quote $ Fn (Map Tag Dynamic) (-> respo.schema/Component)
         'scalar-copy-text $ %{} 'CodeEntry (:doc |)
@@ -216,7 +216,8 @@
             if (nil? build-errors)
               do (remove-watch! *reel :changes) (clear-cache!)
                 add-watch! *reel :changes $ fn (reel prev) (render-app!)
-                reset! *reel $ decode-map-as (refresh-reel @*reel schema/store updater) (:: 'Map 'Tag 'Dynamic)
+                reset! *reel $ decode-map-as (refresh-reel @*reel schema/store updater)
+                  quote $ Map Tag Dynamic
                 hud! |ok~ |Ok
               hud! |error build-errors
             , &unit
@@ -249,17 +250,17 @@
           :code $ quote $ defenum Op
             :states
               quote $ List Dynamic
-              , 'Dynamic
-            :content 'String
-            :data 'Dynamic
-            :hydrate-storage 'app.schema/Store
+              , Dynamic
+            :content String
+            :data Dynamic
+            :hydrate-storage app.schema/Store
           :examples $ []
           :schema $ quote EnumDef
         'Store $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstruct Store
             :states $ quote $ Map Dynamic Dynamic
-            :content 'String
-            :data 'Dynamic
+            :content String
+            :data Dynamic
           :examples $ []
           :schema $ quote StructDef
         'restore-store $ %{} 'CodeEntry (:doc |)
@@ -316,7 +317,7 @@
               (:states cursor s)
                 assoc store :states $ decode-map-as
                   respo.cursor/update-state-tree (:states store) cursor s
-                  :: 'Map 'Dynamic 'Dynamic
+                  quote $ Map Dynamic Dynamic
               (:content data) (assoc store :content data)
               (:data data) (assoc store :data data)
               (:hydrate-storage data) data
