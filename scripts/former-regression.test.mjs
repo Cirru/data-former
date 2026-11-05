@@ -3,6 +3,8 @@ import test from 'node:test';
 import * as c from '../js-out/calcit.core.mjs';
 import { comp_live_button } from '../js-out/app.comp.button.mjs';
 import { comp_container } from '../js-out/app.comp.container.mjs';
+import { new_reel } from '../js-out/reel.typed.mjs';
+import { event__GT_edn } from '../js-out/respo.util.format.mjs';
 import { store, Op, restore_store } from '../js-out/app.schema.mjs';
 import { updater } from '../js-out/app.updater.mjs';
 import { detect_cdn_$q_ } from '../js-out/app.config.mjs';
@@ -11,6 +13,8 @@ import { make_string } from '../js-out/respo.render.html.mjs';
 
 const t = c.init_tags(['event', 'children', 'click', 'input', 'some', 'content', 'data', 'value', 'store', 'states', 'cursor', 'run', 'darken?']);
 const map = c._$n__$M_;
+const inputEvent = (target) => event__GT_edn({ type: 'input', target });
+const clickEvent = () => event__GT_edn({ type: 'click' });
 const field = (v, k) => c.option_$o_unwrap(c.get(v, k));
 const nth = (v, i) => c.option_$o_unwrap(c.nth(v, i));
 const en = c._$n_enum_$o_nth;
@@ -38,7 +42,7 @@ test('live button dispatch and timer are single typed state operations', () => w
   const ops = [];
   const dispatch = (...args) => { assert.equal(args.length, 1); ops.push(args[0]); next = updater(next, args[0], 'button', 1); };
   const tree = comp_live_button(map(t.cursor, c._$L_(t.run)), 'Run', () => { clicks++; });
-  handlers(tree, t.click, 'Run')[0](null, dispatch);
+  handlers(tree, t.click, 'Run')[0](clickEvent(), dispatch);
   assert.equal(clicks, 1);
   assert.equal(getTimer().delay, 400);
   assert.equal(field(field(field(field(next, t.states), t.run), t.data), t['darken?']), true);
@@ -50,7 +54,7 @@ test('live button dispatch and timer are single typed state operations', () => w
 }));
 test('Run converts Cirru EDN to Lisp and keeps nested button state isolated', () => withTimer(getTimer => {
   let next = c.assoc(store, t.content, '[] 1 2');
-  handlers(comp_container(map(t.store, next)), t.click, 'Run')[0](null, (...args) => {
+  handlers(comp_container(new_reel(next)), t.click, 'Run')[0](clickEvent(), (...args) => {
     assert.equal(args.length, 1);
     next = updater(next, args[0], 'run', 1);
   });
@@ -59,17 +63,17 @@ test('Run converts Cirru EDN to Lisp and keeps nested button state isolated', ()
   assert.equal(field(next, t.data), '(1 2)');
 }));
 test('both textareas dispatch a single typed operation to their own field', () => {
-  const inputs = handlers(comp_container(map(t.store, store)), t.input);
+  const inputs = handlers(comp_container(new_reel(store)), t.input);
   assert.equal(inputs.length, 2);
   for (const [i, key] of [t.content, t.data].entries()) {
     let next;
-    inputs[i](map(t.value, `fixture-${i}`), (...args) => { assert.equal(args.length, 1); next = updater(store, args[0], 'input', 1); });
+    inputs[i](inputEvent({ value: `fixture-${i}` }), (...args) => { assert.equal(args.length, 1); next = updater(store, args[0], 'input', 1); });
     assert.equal(field(next, key), `fixture-${i}`);
   }
 });
 test('missing input value is explicitly unwrapped to empty string', () => {
   let next;
-  handlers(comp_container(map(t.store, store)), t.input)[0](map(), (...args) => { next = updater(store, args[0], 'input', 1); });
+  handlers(comp_container(new_reel(store)), t.input)[0](inputEvent({}), (...args) => { next = updater(store, args[0], 'input', 1); });
   assert.equal(field(next, t.content), '');
 });
 test('typed hydrate-storage operation preserves the exact Store', () => {
