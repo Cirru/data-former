@@ -8,30 +8,19 @@ _TODO_
 
 ### 使用者影响
 
-CLI / `@calcit/procs` 配对正式 **0.34.2**；升级后重新安装完整依赖图、生成 JS 并刷新页面。
-使用已发布 UI **0.12.1**、Respo **0.18.1**、JS-FFI **0.2.9**、Reel **0.8.1**，
-传递 Router **0.10.1**，整图使用正式 tag。
+升级到 Calcit **0.35.1** 后，请重新安装依赖、生成 JS 并刷新页面。原存档可以继续打开，
+Run、文本输入、复制、错误 HUD 和开发模式的 Reel 面板沿用原有行为。
 
-按钮样式现在直接保留 UI 的 `StyleValue` union（String / Number / Tag），删除一处
-`Map Tag Dynamic` 强转。编译器确认合并后的样式为 `Map Tag StyleValue`，不再抹掉值类型。
-开发环境 Reel 面板的可选子节点改为显式 Option，页面显示条件保持原样。
+Reel 使用 `State<Op, Store>`，按钮和文本框通过 Respo 的类型化事件读取输入。
+复制边界以 `CopyScalar` 表示 String、Number、Bool、Tag、Symbol，空值仍复制为空字符串，
+复合数据仍会报错。`Store.data` 保留对任意旧存档数据的支持，恢复成功后才启用自动保存。
 
-Run 转换、两处文本输入、400ms 按钮反馈、旧存档恢复和 HUD 保持。Store.data 仍接受
-原任意数据，嵌套 UI 状态允许异构 key；恢复成功后才启用自动保存，坏存档保护保持。
-Copy 仍只接受 ToString 标量。本次没有缩窄这些真实数据入口，也没有修改质量基线。
-
-本地全部 **199** 个定义、完整 strict、原质量门禁、原 **2** 项附带测试、原 **6** 项
-JS 回归及构建通过，Caps strict/toolchain 和 immutable 安装通过。与规范化后的原源码
-逐定义对照，仅按钮样式和可选开发面板两处代码变化，其他 schema 和附带测试保持。
-整合 Dependabot #22 的 undici **8.12.3** 锁文件补丁；原 Vite **8.3.3** 和 npm 发布
-等待策略保持。不增加检查脚本，不提交生成 JS 或模块缓存。
-
-此前 0.32.0 候选已验收 Run 将 `[] 1 2` 转为 `(1 2)` 及刷新恢复；本次尚未重跑浏览器，
-未点击 Copy 或操作真实存档。本 PR 不合并、部署生产或发版；#22 暂保留以协调合并。
+配对正式 `@calcit/procs` **0.35.1**、Respo **0.19.4**、Reel **0.9.2**、UI **0.15.1**、
+JS-FFI **0.2.13**，传递依赖 Router **0.12.1**。
 
 ### 开发
 
-使用Node24、Yarn4.18.0、Caps0.1.1和配对 Calcit 0.34.2：
+使用Node24、Yarn4.18.0、Caps0.1.1和配对 Calcit 0.35.1：
 
 ```sh
 caps --strict --ci
@@ -57,7 +46,7 @@ server destination are unchanged.
 `yarn build` compiles the default JS browser entry and builds once; `yarn dev`
 compiles initially and starts Vite. Run `calcit calcit.cirru -w` in another
 terminal for live edits. CI checks canonical formatting, all definitions, the
-strict workflow, public namespaces, the unchanged quality baseline and business
+strict workflow, public namespaces, the project quality baseline and business
 tests. No additional project-specific verification runner is required.
 
 

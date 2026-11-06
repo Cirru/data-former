@@ -6,7 +6,7 @@
     {} (:description |) (:init-fn 'app.main/main!) (:mode :js) (:reload-fn 'app.main/reload!) (:target :browser)
       :feature-policy $ {}
       :modules $ [] |respo.calcit/ |respo-ui.calcit/ |reel.calcit/ |js-ffi/
-      :type-slots $ {} $ :dispatch-op |app.schema/Op
+      :type-slots $ {} $ :dispatch-op |app.schema/DispatchOp
   :files $ {}
     'app.comp.button $ %{} 'FileEntry
       :defs $ {} $ 'comp-live-button
@@ -14,31 +14,32 @@
           :code $ quote $ defcomp comp-live-button (states text on-click)
             let
                 cursor $ decode-map-as
-                    get states :cursor
-                    , .unwrap-or $ []
-                  quote $ List Dynamic
-                state $
-                  get states :data
-                  , .unwrap-or $ {} (:darken? false)
+                  .unwrap-or (get states :cursor) ([])
+                  List respo.schema/CoordKey
+                state $ decode-map-as
+                  .unwrap-or (get states :data)
+                    {} $ :darken? false
+                  Map Tag Bool
               button $ {}
                 :style $ merge ui/button $ if
-                    get state :darken?
-                    , .unwrap-or false
+                  .unwrap-or (get state :darken?) false
                   {} $ :background-color $ hsl 0 0 94
                   {}
                 :inner-text text
-                :on-click $ fn (e d!)
-                  hint-fn $ Fn (Map Tag Dynamic)
-                    Fn app.schema/Op $ -> Unit
+                :on-click $ fn (event d!)
+                  hint-fn $ Fn respo.schema/RespoEvent
+                    Fn AnyEnum $ -> Unit
                     -> Unit
-                  on-click e d!
+                  on-click event d!
                   d! $ Op :states cursor $ assoc state :darken? true
                   browser/set-timeout!
-                    fn () $ d! $ Op :states cursor (assoc state :darken? false)
+                    fn ()
+                      hint-fn $ Fn $ -> Unit
+                      d! $ Op :states cursor $ assoc state :darken? false
                     , 400
                   , &unit
           :examples $ []
-          :schema $ quote $ Fn (Map Dynamic Dynamic) String respo.schema/EventHandler (-> respo.schema/Component) (:features :js-ffi)
+          :schema $ quote $ Fn respo.schema/States String respo.schema/EventHandler (-> respo.schema/Component) (:features :js-ffi)
       :ns $ %{} 'NsEntry (:doc |)
         :code $ quote $ ns app.comp.button
           :require
@@ -51,12 +52,14 @@
             app.schema :refer $ Op
     'app.comp.container $ %{} 'FileEntry
       :defs $ {}
+        'CopyScalar $ %{} 'CodeEntry (:doc |)
+          :code $ quote $ defunion CopyScalar String Number Bool Tag Symbol
+          :examples $ []
+          :schema $ quote UnionDef
         'comp-container $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defcomp comp-container (reel)
             let
-                store $ app.schema/restore-store $
-                  get reel :store
-                  , .unwrap
+                store $ :store reel
                 states $ :states store
                 content $ :content store
                 data $ :data store
@@ -68,9 +71,15 @@
                   span $ {}
                   div ({})
                     comp-live-button (>> states :run) |Run $ fn (e d!)
+                      hint-fn $ Fn respo.schema/RespoEvent
+                        Fn AnyEnum $ -> Unit
+                        -> Unit
                       d! $ Op :data $ format-to-lisp (parse-cirru-edn content)
-                    =< 8 nil
+                    respo.comp.space/space-x 8
                     comp-live-button (>> states :copy) |Copy $ fn (e d!)
+                      hint-fn $ Fn respo.schema/RespoEvent
+                        Fn AnyEnum $ -> Unit
+                        -> Unit
                       copy! $ scalar-copy-text data
                       , &unit
                 div
@@ -79,33 +88,44 @@
                     :style $ merge (merge ui/flex ui/textarea)
                       {} $ :font-family ui/font-code
                     :on-input $ fn (e d!)
-                      d! $ Op :content $ decode-map-as
-                          get e :value
-                          , .unwrap-or |
-                        , 'String
+                      hint-fn $ Fn respo.schema/RespoEvent
+                        Fn AnyEnum $ -> Unit
+                        -> Unit
+                      d! $ Op :content $ input-text e
                   textarea $ {} (:value data) (:placeholder |data)
                     :style $ merge (merge ui/flex ui/textarea)
                       {} $ :font-family ui/font-code
                     :on-input $ fn (e d!)
-                      d! $ Op :data $
-                        get e :value
-                        , .unwrap-or |
+                      hint-fn $ Fn respo.schema/RespoEvent
+                        Fn AnyEnum $ -> Unit
+                        -> Unit
+                      d! $ Op :data $ input-text e
                 if dev?
-                  Option :some $ comp-reel (>> states :reel) reel $ {}
+                  Option :some $ reel.comp.reel/comp-typed-reel (>> states :reel) reel $ {}
                   Option :none
           :examples $ []
-          :schema $ quote $ Fn (Map Tag Dynamic) (-> respo.schema/Component)
+          :schema $ quote $ Fn (reel.typed/State app.schema/Op app.schema/Store) (-> respo.schema/Component) (:features :js-ffi)
+        'input-text $ %{} 'CodeEntry (:doc |)
+          :code $ quote $ defn input-text (event)
+            let
+                value $ :value event
+              if
+                or (nil? value)
+                  = :unit $ type-of value
+                , | $ decode-map-as value String
+          :examples $ []
+          :schema $ quote $ Fn respo.schema/RespoEvent (-> String)
         'scalar-copy-text $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn scalar-copy-text (value)
-            cond
-                nil? value
-                , |
-              (string? value) value
-              (number? value) (to-string value)
-              (bool? value) (to-string value)
-              (tag? value) (to-string value)
-              (symbol? value) (to-string value)
-              true $ raise "|Only scalar data can be copied"
+            if (nil? value) | $ match (try-decode-map-as value app.comp.container/CopyScalar)
+              (:ok scalar)
+                match scalar
+                  (String text) text
+                  (Number number) (to-string number)
+                  (Bool flag) (to-string flag)
+                  (Tag tag) (to-string tag)
+                  (Symbol symbol) (to-string symbol)
+              (:err _message) (raise "|Only scalar data can be copied")
           :examples $ []
           :schema $ quote $ Fn T (-> String) (:generics T)
       :ns $ %{} 'NsEntry (:doc |)
@@ -114,8 +134,6 @@
             respo-ui.core :refer $ hsl
             respo-ui.core :as ui
             respo.core :refer $ defcomp >> <> div button textarea span
-            respo.comp.space :refer $ =<
-            reel.comp.reel :refer $ comp-reel
             app.config :refer $ dev?
             |copy-text-to-clipboard :default copy!
             app.comp.button :refer $ comp-live-button
@@ -157,19 +175,19 @@
       :defs $ {}
         '*reel $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defref *reel
-            -> reel-schema/reel (assoc :base schema/store) (assoc :store schema/store)
+            reel.typed/State :base schema/store :store schema/store :records ([]) :pointer (Option :none) :stopped? false :display? false :merged? false
           :examples $ []
-          :schema $ quote $ Ref (Map Tag Dynamic)
+          :schema $ quote $ Ref (reel.typed/State app.schema/Op app.schema/Store)
         'dispatch! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn dispatch! (op)
             when config/dev? $ println |Dispatch: op
-            reset! *reel $ reel-updater
-              fn (saved operation op-id op-time)
-                updater (schema/restore-store saved) (decode-map-as operation 'app.schema/Op) (decode-map-as op-id 'String) (decode-map-as op-time 'Number)
-              , @*reel op
+            reset! *reel $ match (reel.typed/decode-control op)
+              (:some control) (reel.typed/apply-control updater @*reel control)
+              (:none)
+                reel.typed/record-op updater @*reel (decode-map-as op app.schema/Op) (generate-id!) (js-ffi.shared/now-ms)
             , &unit
           :examples $ []
-          :schema $ quote $ Fn app.schema/Op (-> Unit)
+          :schema $ quote $ Fn AnyEnum (-> Unit) (:features :js-ffi)
         'main! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn main! ()
             println "|Running mode:" $ if config/dev? |dev |release
@@ -200,15 +218,9 @@
           :schema $ quote $ Fn (-> respo.dom/DomElement) (:features :js-ffi)
         'persist-storage! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn persist-storage! ()
-            let
-                reel-value @*reel
-                store $ schema/restore-store $
-                  get reel-value :store
-                  , .unwrap
-              browser/storage-set!
-                  get config/site :storage-key
-                  , .unwrap-or |data-former
-                format-cirru-edn store
+            browser/storage-set!
+              .unwrap-or (get config/site :storage-key) |data-former
+              format-cirru-edn $ :store @*reel
           :examples $ []
           :schema $ quote $ Fn (-> Unit) (:features :js-ffi)
         'reload! $ %{} 'CodeEntry (:doc |)
@@ -216,8 +228,7 @@
             if (nil? build-errors)
               do (remove-watch! *reel :changes) (clear-cache!)
                 add-watch! *reel :changes $ fn (reel prev) (render-app!)
-                reset! *reel $ decode-map-as (refresh-reel @*reel schema/store updater)
-                  quote $ Map Tag Dynamic
+                reset! *reel $ reel.typed/refresh updater @*reel schema/store
                 hud! |ok~ |Ok
               hud! |error build-errors
             , &unit
@@ -236,8 +247,6 @@
             app.updater :refer $ updater
             app.schema :as schema
             reel.util :refer $ listen-devtools!
-            reel.core :refer $ reel-updater refresh-reel
-            reel.schema :as reel-schema
             cljs.reader :refer $ read-string
             app.config :as config
             |./calcit.build-errors :default build-errors
@@ -246,11 +255,13 @@
             respo.ffi.browser :as respo-browser
     'app.schema $ %{} 'FileEntry
       :defs $ {}
+        'DispatchOp $ %{} 'CodeEntry (:doc |)
+          :code $ quote $ def DispatchOp (:: :content |)
+          :examples $ []
+          :schema $ quote AnyEnum
         'Op $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defenum Op
-            :states
-              quote $ List Dynamic
-              , Dynamic
+            :states (List Dynamic) Dynamic
             :content String
             :data Dynamic
             :hydrate-storage app.schema/Store
@@ -258,7 +269,7 @@
           :schema $ quote EnumDef
         'Store $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstruct Store
-            :states $ quote $ Map Dynamic Dynamic
+            :states $ Map Dynamic Dynamic
             :content String
             :data Dynamic
           :examples $ []
@@ -317,7 +328,7 @@
               (:states cursor s)
                 assoc store :states $ decode-map-as
                   respo.cursor/update-state-tree (:states store) cursor s
-                  quote $ Map Dynamic Dynamic
+                  Map Dynamic Dynamic
               (:content data) (assoc store :content data)
               (:data data) (assoc store :data data)
               (:hydrate-storage data) data
