@@ -6,7 +6,7 @@
     {} (:description |) (:init-fn 'app.main/main!) (:mode :js) (:reload-fn 'app.main/reload!) (:target :browser)
       :feature-policy $ {}
       :modules $ [] |respo.calcit/ |respo-ui.calcit/ |reel.calcit/ |js-ffi/
-      :type-slots $ {} $ :dispatch-op |app.schema/DispatchOp
+      :type-slots $ {} $ :dispatch-op 'app.schema/Op
   :files $ {}
     'app.comp.button $ %{} 'FileEntry
       :defs $ {} $ 'comp-live-button
@@ -28,7 +28,7 @@
                 :inner-text text
                 :on-click $ fn (event d!)
                   hint-fn $ Fn respo.schema/RespoEvent
-                    Fn AnyEnum $ -> Unit
+                    Fn app.schema/Op $ -> Unit
                     -> Unit
                   on-click event d!
                   d! $ Op :states cursor $ assoc state :darken? true
@@ -72,13 +72,13 @@
                   div ({})
                     comp-live-button (>> states :run) |Run $ fn (e d!)
                       hint-fn $ Fn respo.schema/RespoEvent
-                        Fn AnyEnum $ -> Unit
+                        Fn app.schema/Op $ -> Unit
                         -> Unit
                       d! $ Op :data $ format-to-lisp (parse-cirru-edn content)
                     respo.comp.space/space-x 8
                     comp-live-button (>> states :copy) |Copy $ fn (e d!)
                       hint-fn $ Fn respo.schema/RespoEvent
-                        Fn AnyEnum $ -> Unit
+                        Fn app.schema/Op $ -> Unit
                         -> Unit
                       copy! $ scalar-copy-text data
                       , &unit
@@ -89,7 +89,7 @@
                       {} $ :font-family ui/font-code
                     :on-input $ fn (e d!)
                       hint-fn $ Fn respo.schema/RespoEvent
-                        Fn AnyEnum $ -> Unit
+                        Fn app.schema/Op $ -> Unit
                         -> Unit
                       d! $ Op :content $ input-text e
                   textarea $ {} (:value data) (:placeholder |data)
@@ -97,7 +97,7 @@
                       {} $ :font-family ui/font-code
                     :on-input $ fn (e d!)
                       hint-fn $ Fn respo.schema/RespoEvent
-                        Fn AnyEnum $ -> Unit
+                        Fn app.schema/Op $ -> Unit
                         -> Unit
                       d! $ Op :data $ input-text e
                 if dev?
@@ -184,10 +184,10 @@
             reset! *reel $ match (reel.typed/decode-control op)
               (:some control) (reel.typed/apply-control updater @*reel control)
               (:none)
-                reel.typed/record-op updater @*reel (decode-map-as op app.schema/Op) (generate-id!) (js-ffi.shared/now-ms)
+                reel.typed/record-op updater @*reel op (generate-id!) (js-ffi.shared/now-ms)
             , &unit
           :examples $ []
-          :schema $ quote $ Fn AnyEnum (-> Unit) (:features :js-ffi)
+          :schema $ quote $ Fn app.schema/Op (-> Unit) (:features :js-ffi)
         'main! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn main! ()
             println "|Running mode:" $ if config/dev? |dev |release
@@ -246,7 +246,6 @@
             app.comp.container :refer $ comp-container
             app.updater :refer $ updater
             app.schema :as schema
-            reel.util :refer $ listen-devtools!
             cljs.reader :refer $ read-string
             app.config :as config
             |./calcit.build-errors :default build-errors
@@ -255,16 +254,19 @@
             respo.ffi.browser :as respo-browser
     'app.schema $ %{} 'FileEntry
       :defs $ {}
-        'DispatchOp $ %{} 'CodeEntry (:doc |)
-          :code $ quote $ def DispatchOp (:: :content |)
-          :examples $ []
-          :schema $ quote AnyEnum
         'Op $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defenum Op
-            :states (List Dynamic) Dynamic
+            :states (List respo.schema/CoordKey) (Map Tag Bool)
             :content String
             :data Dynamic
             :hydrate-storage app.schema/Store
+            :reel/toggle
+            :reel/recall Number
+            :reel/run
+            :reel/step
+            :reel/merge
+            :reel/reset
+            :reel/remove Number
           :examples $ []
           :schema $ quote EnumDef
         'Store $ %{} 'CodeEntry (:doc |)
