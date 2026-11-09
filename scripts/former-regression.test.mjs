@@ -15,6 +15,7 @@ const t = c.init_tags(['event', 'children', 'click', 'input', 'some', 'content',
 const map = c._$n__$M_;
 const inputEvent = (target) => event__GT_edn({ type: 'input', target });
 const clickEvent = () => event__GT_edn({ type: 'click' });
+const rejectControl = () => assert.fail('Application events must use Respo dispatch');
 const field = (v, k) => c.option_$o_unwrap(c.get(v, k));
 const nth = (v, i) => c.option_$o_unwrap(c.nth(v, i));
 const en = c._$n_enum_$o_nth;
@@ -54,7 +55,7 @@ test('live button dispatch and timer are single typed state operations', () => w
 }));
 test('Run converts Cirru EDN to Lisp and keeps nested button state isolated', () => withTimer(getTimer => {
   let next = c.assoc(store, t.content, '[] 1 2');
-  handlers(comp_container(new_reel(next)), t.click, 'Run')[0](clickEvent(), (...args) => {
+  handlers(comp_container(new_reel(next), rejectControl), t.click, 'Run')[0](clickEvent(), (...args) => {
     assert.equal(args.length, 1);
     next = updater(next, args[0], 'run', 1);
   });
@@ -63,7 +64,7 @@ test('Run converts Cirru EDN to Lisp and keeps nested button state isolated', ()
   assert.equal(field(next, t.data), '(1 2)');
 }));
 test('both textareas dispatch a single typed operation to their own field', () => {
-  const inputs = handlers(comp_container(new_reel(store)), t.input);
+  const inputs = handlers(comp_container(new_reel(store), rejectControl), t.input);
   assert.equal(inputs.length, 2);
   for (const [i, key] of [t.content, t.data].entries()) {
     let next;
@@ -73,15 +74,16 @@ test('both textareas dispatch a single typed operation to their own field', () =
 });
 test('missing input value is explicitly unwrapped to empty string', () => {
   let next;
-  handlers(comp_container(new_reel(store)), t.input)[0](inputEvent({}), (...args) => { next = updater(store, args[0], 'input', 1); });
+  handlers(comp_container(new_reel(store), rejectControl), t.input)[0](inputEvent({}), (...args) => { next = updater(store, args[0], 'input', 1); });
   assert.equal(field(next, t.content), '');
 });
 test('typed hydrate-storage operation preserves the exact Store', () => {
-  const saved = c.assoc(store, t.content, 'saved');
+  const states = map(t.run, map(t.data, map(t['darken?'], true)), 'panel', map(), 1, map());
+  const saved = c.assoc(c.assoc(store, t.content, 'saved'), t.states, states);
   assert.equal(restore_store(saved), saved);
   const wire = c.parse_cirru_edn(c.format_cirru_edn(saved));
   assert.ok(c._$e_(restore_store(wire), saved));
-  assert.ok(c._$e_(restore_store(map(t.states, map(), t.content, 'saved', t.data, field(saved, t.data))), saved));
+  assert.ok(c._$e_(restore_store(map(t.states, states, t.content, 'saved', t.data, field(saved, t.data))), saved));
   assert.throws(() => restore_store(map(t.states, map(), t.content, 42, t.data, 'saved')));
   assert.ok(c._$e_(updater(store, c._PCT__$o__$o_(Op, c.newTag('hydrate-storage'), saved), 'hydrate', 1), saved));
 });
