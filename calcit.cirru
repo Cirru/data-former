@@ -6,7 +6,7 @@
     {} (:description |) (:init-fn 'app.main/main!) (:mode :js) (:reload-fn 'app.main/reload!) (:target :browser)
       :feature-policy $ {}
       :modules $ [] |respo.calcit/ |respo-ui.calcit/ |reel.calcit/ |js-ffi/
-      :type-slots $ {} $ :dispatch-op 'app.schema/RenderEvent
+      :type-slots $ {} $ :dispatch-op 'app.schema/Op
   :files $ {}
     'app.comp.button $ %{} 'FileEntry
       :defs $ {} $ 'comp-live-button
@@ -62,7 +62,7 @@
           :examples $ []
           :schema $ quote UnionDef
         'comp-container $ %{} 'CodeEntry (:doc |)
-          :code $ quote $ defcomp comp-container (reel)
+          :code $ quote $ defcomp comp-container (reel on-control)
             let
                 store $ :store reel
                 states $ :states store
@@ -106,10 +106,13 @@
                         -> Unit
                       d! $ Op :data $ input-text e
                 if dev?
-                  Option :some $ reel.comp.reel/comp-typed-reel (>> states :reel) reel $ {}
+                  Option :some $ reel.comp.reel/comp-typed-reel (>> states :reel) reel ({}) on-control
                   Option :none
           :examples $ []
-          :schema $ quote $ Fn (reel.typed/State app.schema/Op app.schema/Store) (-> respo.schema/Component) (:features :js-ffi)
+          :schema $ quote $ Fn (reel.typed/State app.schema/Op app.schema/Store)
+            Fn reel.typed/Control $ -> Unit
+            -> respo.schema/Component
+            :features :js-ffi
         'input-text $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn input-text (event)
             let
@@ -193,17 +196,6 @@
             , &unit
           :examples $ []
           :schema $ quote $ Fn app.schema/ResolvedOp (-> Unit) (:features :js-ffi)
-        'dispatch-render! $ %{} 'CodeEntry (:doc |)
-          :code $ quote $ defn dispatch-render! (op)
-            match (reel.typed/decode-control op)
-              (:some control) (dispatch! control)
-              (:none)
-                if
-                  = (enum-definition op) (Option :some schema/Op)
-                  dispatch! $ decode-map-as op 'app.schema/Op
-                  raise |unknown-former-operation
-          :examples $ []
-          :schema $ quote $ Fn AnyEnum (-> Unit) (:features :js-ffi)
         'main! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn main! ()
             println "|Running mode:" $ if config/dev? |dev |release
@@ -253,8 +245,12 @@
         'render-app! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn render-app! ()
             render-with! (mount-target)
-              fn () $ comp-container @*reel
-              , dispatch-render!
+              fn () $ comp-container @*reel $ fn (control)
+                hint-fn $ Fn reel.typed/Control $ -> Unit
+                dispatch! control
+              fn (op)
+                hint-fn $ Fn app.schema/Op $ -> Unit
+                dispatch! op
           :examples $ []
           :schema $ quote $ Fn (-> Unit) (:features :js-ffi)
       :ns $ %{} 'NsEntry (:doc |)
@@ -280,18 +276,13 @@
             :hydrate-storage app.schema/Store
           :examples $ []
           :schema $ quote EnumDef
-        'RenderEvent $ %{} 'CodeEntry
-          :doc "|Respo entry slot for nominal UI operations and legacy anonymous Reel events."
-          :code $ quote $ def RenderEvent (:: :unhandled)
-          :examples $ []
-          :schema $ quote AnyEnum
         'ResolvedOp $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defunion ResolvedOp app.schema/Op reel.typed/Control
           :examples $ []
           :schema $ quote UnionDef
         'Store $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstruct Store
-            :states $ Map Dynamic Dynamic
+            :states $ Map respo.schema/CoordKey Dynamic
             :content String
             :data Dynamic
           :examples $ []
@@ -350,7 +341,7 @@
               (:states cursor s)
                 assoc store :states $ decode-map-as
                   respo.cursor/update-state-tree (:states store) cursor s
-                  Map Dynamic Dynamic
+                  Map respo.schema/CoordKey Dynamic
               (:content data) (assoc store :content data)
               (:data data) (assoc store :data data)
               (:hydrate-storage data) data
