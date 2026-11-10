@@ -84,6 +84,9 @@ test('typed hydrate-storage operation preserves the exact Store', () => {
   const wire = c.parse_cirru_edn(c.format_cirru_edn(saved));
   assert.ok(c._$e_(restore_store(wire), saved));
   assert.ok(c._$e_(restore_store(map(t.states, states, t.content, 'saved', t.data, field(saved, t.data))), saved));
+  const legacyData = map(t.value, c._$L_(1, false));
+  const legacyStore = restore_store(map(t.states, states, t.content, 'saved', t.data, legacyData));
+  assert.ok(c._$e_(field(legacyStore, t.data), legacyData));
   assert.throws(() => restore_store(map(t.states, map(), t.content, 42, t.data, 'saved')));
   assert.ok(c._$e_(updater(store, c._PCT__$o__$o_(Op, c.newTag('hydrate-storage'), saved), 'hydrate', 1), saved));
 });

@@ -53,7 +53,14 @@ jobs:
         calcit fix --workflow strict --verify --format json | jq -e '.data.workflow.status == "passed" and .diagnostics == []'
         calcit --check-only --ns app.comp.button --ns app.comp.container --ns app.config --ns app.main --ns app.schema --ns app.updater --summary-only
         calcit calcit.cirru test --require-match
-        calcit calcit.cirru analyze quality --baseline config/calcit-quality.cirru
+        calcit analyze weak-types --only coverage --coverage-level none,partial --format json |
+          jq -e '.data.definitions == []'
+        calcit analyze weak-types --format json |
+          jq -e 'all(.data.definitions[];
+            .id == "app.schema/store" and
+            (.occurrences | length <= 1 and all(.[]; .kind == "code-nil" and .intent == "unresolved")))'
+        calcit analyze weak-types --only deprecated-call --summary-only --format json |
+          jq -e '.data.summary.calls == 0'
 
     - name: Select CDN asset path
       id: asset-path
