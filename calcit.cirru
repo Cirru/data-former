@@ -14,10 +14,10 @@
           :code $ quote $ defcomp comp-live-button (states text on-click)
             let
                 cursor $ decode-map-as
-                  .unwrap-or (get states :cursor) ([])
+                  .unwrap-or (&map:get states :cursor) ([])
                   List respo.schema/CoordKey
                 state $ decode-map-as
-                  .unwrap-or (get states :data)
+                  .unwrap-or (&map:get states :data)
                     {} $ :darken? false
                   Map Tag Bool
               button $ {}
@@ -28,7 +28,7 @@
                 :inner-text text
                 :on-click $ fn (event d!)
                   hint-fn $ Fn respo.schema/RespoEvent
-                    Fn app.schema/Op $ -> Unit
+                    Fn Op $ -> Unit
                     -> Unit
                   on-click event d!
                   d! $ Op :states cursor $ assoc state :darken? true
@@ -77,13 +77,13 @@
                   div ({})
                     comp-live-button (>> states :run) |Run $ fn (e d!)
                       hint-fn $ Fn respo.schema/RespoEvent
-                        Fn app.schema/Op $ -> Unit
+                        Fn Op $ -> Unit
                         -> Unit
                       d! $ Op :data $ format-to-lisp (parse-cirru-edn content)
                     respo.comp.space/space-x 8
                     comp-live-button (>> states :copy) |Copy $ fn (e d!)
                       hint-fn $ Fn respo.schema/RespoEvent
-                        Fn app.schema/Op $ -> Unit
+                        Fn Op $ -> Unit
                         -> Unit
                       copy! $ scalar-copy-text data
                       , &unit
@@ -94,7 +94,7 @@
                       {} $ :font-family ui/font-code
                     :on-input $ fn (e d!)
                       hint-fn $ Fn respo.schema/RespoEvent
-                        Fn app.schema/Op $ -> Unit
+                        Fn Op $ -> Unit
                         -> Unit
                       d! $ Op :content $ input-text e
                   textarea $ {} (:value data) (:placeholder |data)
@@ -102,7 +102,7 @@
                       {} $ :font-family ui/font-code
                     :on-input $ fn (e d!)
                       hint-fn $ Fn respo.schema/RespoEvent
-                        Fn app.schema/Op $ -> Unit
+                        Fn Op $ -> Unit
                         -> Unit
                       d! $ Op :data $ input-text e
                 if dev?
@@ -249,7 +249,7 @@
                 hint-fn $ Fn reel.typed/Control $ -> Unit
                 dispatch! control
               fn (op)
-                hint-fn $ Fn app.schema/Op $ -> Unit
+                hint-fn $ Fn schema/Op $ -> Unit
                 dispatch! op
           :examples $ []
           :schema $ quote $ Fn (-> Unit) (:features :js-ffi)
