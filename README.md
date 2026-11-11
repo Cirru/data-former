@@ -8,19 +8,19 @@ _TODO_
 
 ### 使用者影响
 
-升级到 Calcit **0.40.0** 后，请重新安装依赖、生成 JS 并刷新页面。原存档可以继续打开，
+升级到 Calcit **0.41.0** 后，请重新安装依赖、生成 JS 并刷新页面。原存档可以继续打开，
 Run、文本输入、复制、错误 HUD 和开发模式的 Reel 面板沿用原有行为。
 
 Reel 使用 `State<Op, Store>`，按钮和文本框通过 Respo 的类型化事件派发具名 `Op`。应用派发使用 `Op | reel.typed/Control`，旧面板事件只在渲染入口解码。按钮路径使用 `CoordKey` union，局部状态使用 `Map Tag Bool`。
 复制边界以 `CopyScalar` 表示 String、Number、Bool、Tag、Symbol，空值仍复制为空字符串，
-复合数据仍会报错。`Store.data` 保留对任意旧存档数据的支持，恢复成功后才启用自动保存。
+复合数据仍会报错。新输出操作只接收 `String`，包括 Run 的格式化结果和输出文本框输入。`Store.data` 保留对任意旧存档数据的支持，恢复成功后才启用自动保存。
 
-配对正式 `@calcit/procs` **0.40.0**、Respo **0.19.5**、Reel **0.11.0**、UI **0.15.2**、
+配对正式 `@calcit/procs` **0.41.0**、Respo **0.19.5**、Reel **0.11.0**、UI **0.15.2**、
 JS-FFI **0.2.13**，传递依赖 Router **0.12.2**。
 
 ### 开发
 
-使用 Node 24、Yarn 4.18.0、Caps 0.1.1 和配对 Calcit 0.40.0：
+使用 Node 24、Yarn 4.18.0、Caps 0.1.1 和配对 Calcit 0.41.0：
 
 ```sh
 caps --strict --ci
@@ -29,10 +29,11 @@ caps verify --toolchain
 calcit --check-only --all-defs
 calcit fix --workflow strict --verify
 calcit test --require-match
-calcit analyze quality --baseline config/calcit-quality.cirru
 yarn build
 node --test scripts/former-regression.test.mjs
 ```
+
+CI 使用 `analyze weak-types` 执行原质量上限。仅初始 Store 允许一处未解决的 nil，其余项目代码的弱类型、覆盖缺口和弃用调用上限为零。
 
 Use only `calcit.cirru` and `deps.cirru`; do not restore retired
 `compact.cirru` and `package.cirru` snapshots. CI uploads and publicly verifies

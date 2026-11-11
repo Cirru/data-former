@@ -41,7 +41,7 @@
           :examples $ []
           :schema $ quote $ Fn respo.schema/States String
             Fn respo.schema/RespoEvent
-              Fn app.schema/Op $ -> Unit
+              Fn Op $ -> Unit
               -> Unit
             -> respo.schema/Component
             :features :js-ffi
@@ -106,10 +106,10 @@
                         -> Unit
                       d! $ Op :data $ input-text e
                 if dev?
-                  Option :some $ reel.comp.reel/comp-typed-reel (>> states :reel) reel ({}) on-control
-                  Option :none
+                  Some $ reel.comp.reel/comp-typed-reel (>> states :reel) reel ({}) on-control
+                  , None
           :examples $ []
-          :schema $ quote $ Fn (reel.typed/State app.schema/Op app.schema/Store)
+          :schema $ quote $ Fn (reel.typed/State Op Store)
             Fn reel.typed/Control $ -> Unit
             -> respo.schema/Component
             :features :js-ffi
@@ -183,9 +183,9 @@
       :defs $ {}
         '*reel $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defref *reel
-            reel.typed/State :base schema/store :store schema/store :records ([]) :pointer (Option :none) :stopped? false :display? false :merged? false
+            reel.typed/State :base schema/store :store schema/store :records ([]) :pointer None :stopped? false :display? false :merged? false
           :examples $ []
-          :schema $ quote $ Ref (reel.typed/State app.schema/Op app.schema/Store)
+          :schema $ quote $ Ref (reel.typed/State schema/Op schema/Store)
         'dispatch! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn dispatch! (op)
             when config/dev? $ println |Dispatch: op
@@ -195,7 +195,7 @@
                 reel.typed/record-op updater @*reel action (generate-id!) (js-ffi.shared/now-ms)
             , &unit
           :examples $ []
-          :schema $ quote $ Fn app.schema/ResolvedOp (-> Unit) (:features :js-ffi)
+          :schema $ quote $ Fn schema/ResolvedOp (-> Unit) (:features :js-ffi)
         'main! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn main! ()
             println "|Running mode:" $ if config/dev? |dev |release
@@ -272,7 +272,7 @@
           :code $ quote $ defenum Op
             :states (List respo.schema/CoordKey) (Map Tag Bool)
             :content String
-            :data Dynamic
+            :data String
             :hydrate-storage app.schema/Store
           :examples $ []
           :schema $ quote EnumDef
@@ -301,7 +301,7 @@
                     raise "|Expected Data Former Store"
               decode-map-as data 'app.schema/Store
           :examples $ []
-          :schema $ quote $ Fn T (-> app.schema/Store) (:generics T)
+          :schema $ quote $ Fn T (-> Store) (:generics T)
           :tests $ [] $ %{} 'TestEntry (:name |legacy-map-and-store-roundtrip)
             :code $ quote $ let
                 legacy $ {}
@@ -330,7 +330,7 @@
           :code $ quote $ def store
             Store :states ({}) :content | :data nil
           :examples $ []
-          :schema $ quote app.schema/Store
+          :schema $ quote Store
       :ns $ %{} 'NsEntry (:doc |)
         :code $ quote $ ns app.schema
     'app.updater $ %{} 'FileEntry
@@ -346,19 +346,15 @@
               (:data data) (assoc store :data data)
               (:hydrate-storage data) data
           :examples $ []
-          :schema $ quote $ Fn app.schema/Store app.schema/Op String Number (-> app.schema/Store)
+          :schema $ quote $ Fn Store Op String Number (-> Store)
           :tests $ [] $ %{} 'TestEntry (:name |nominal-store-operations)
             :code $ quote $ let
                 initial $ Store :states ({}) :content | :data nil
                 content-store $ updater initial (Op :content |hello) |content-op 1
-                data-store $ updater content-store
-                  Op :data $ {} $ :ok true
-                  , |data-op 2
+                data-store $ updater content-store (Op :data |formatted) |data-op 2
                 hydrated $ Store :states ({}) :content |restored :data 42
               assert= (assoc initial :content |hello) content-store
-              assert=
-                assoc content-store :data $ {} $ :ok true
-                , data-store
+              assert= (assoc content-store :data |formatted) data-store
               assert= hydrated $ updater data-store (Op :hydrate-storage hydrated) |hydrate-op 3
       :ns $ %{} 'NsEntry (:doc |)
         :code $ quote $ ns app.updater
