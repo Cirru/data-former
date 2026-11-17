@@ -112,7 +112,7 @@
           :schema $ quote $ Fn (reel.typed/State Op Store)
             Fn reel.typed/Control $ -> Unit
             -> respo.schema/Component
-            :features :js-ffi
+            :features :js-ffi :state
         'input-text $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn input-text (event)
             let
