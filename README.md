@@ -15,8 +15,8 @@ Reel 使用 `State<Op, Store>`，按钮和文本框通过 Respo 的类型化事�
 复制边界以 `CopyScalar` 表示 String、Number、Bool、Tag、Symbol，空值仍复制为空字符串，
 复合数据仍会报错。新输出操作只接收 `String`，包括 Run 的格式化结果和输出文本框输入。`Store.data` 保留对任意旧存档数据的支持，恢复成功后才启用自动保存。
 
-配对正式 `@calcit/procs` **0.43.0**、Respo **0.19.10**、Reel **0.11.2**、UI **0.15.4**、
-JS-FFI **0.2.18**，传递依赖 Router **0.12.8**。
+配对正式 `@calcit/procs` **0.43.0**、Respo **0.19.11**、Reel **0.11.3**、UI **0.15.5**、
+JS-FFI **0.2.18**，传递依赖 Router **0.12.9**。
 
 ### 开发
 
