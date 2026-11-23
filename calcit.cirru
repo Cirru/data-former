@@ -339,9 +339,7 @@
           :code $ quote $ defn updater (store op op-id op-time)
             match op
               (:states cursor s)
-                assoc store :states $ decode-map-as
-                  respo.cursor/update-state-tree (:states store) cursor s
-                  Map respo.schema/CoordKey Dynamic
+                assoc store :states $ respo.cursor/update-state-map (:states store) cursor s
               (:content data) (assoc store :content data)
               (:data data) (assoc store :data data)
               (:hydrate-storage data) data
@@ -356,6 +354,14 @@
               assert= (assoc initial :content |hello) content-store
               assert= (assoc content-store :data |formatted) data-store
               assert= hydrated $ updater data-store (Op :hydrate-storage hydrated) |hydrate-op 3
+              let
+                  initial-states $ {} $ :sibling |kept
+                  state-store $ assoc initial :states initial-states
+                  patch $ {} $ :open true
+                  paths $ [] ([]) ([] :panel) ([] :panel 2)
+                map paths $ fn (path)
+                  assert= (respo.cursor/update-state-tree initial-states path patch)
+                    :states $ updater state-store (Op :states path patch) |states-op 4
       :ns $ %{} 'NsEntry (:doc |)
         :code $ quote $ ns app.updater
           :require
